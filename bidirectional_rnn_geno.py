@@ -10,6 +10,7 @@ from tensorflow.models.rnn import rnn, rnn_cell
 import numpy as np
 import time
 import sys
+import math
 
 # Parameters
 learning_rate = 0.001 # learning rate needed to be changed
@@ -24,7 +25,7 @@ n_hidden = 5 # hidden layer num of features
 n_classes = 1 # binary (0 or 1)
 max_epochs = 1000
 
-data = np.loadtxt('/Users/deepakmuralidharan/Documents/CM229S/data/train_data.txt',delimiter=',')
+data = np.loadtxt('/Users/deepakmuralidharan/Documents/Bidirectional-LSTM/data/train_data.txt',delimiter=',')
 
 # tf Graph input
 x = tf.placeholder("float", [None, n_steps, n_input]) # batch size, number of steps, input dimension
@@ -135,9 +136,10 @@ with tf.Session() as sess:
           sess.run(optimizer, feed_dict={x: batch_xs, y: batch_ys,
                                          istate_fw: np.zeros((batch_size, 2*n_hidden)),
                                          istate_bw: np.zeros((batch_size, 2*n_hidden))})
-          loss = sess.run(cost, feed_dict={x: batch_xs, y: batch_ys,
+          predicted,loss,ground_truth = sess.run([pred,cost,_y], feed_dict={x: batch_xs, y: batch_ys,
                                            istate_fw: np.zeros((batch_size, 2*n_hidden)),
                                            istate_bw: np.zeros((batch_size, 2*n_hidden))})
+
 
           total_loss.append(loss)
           if verbose and step % verbose == 0:
@@ -147,6 +149,8 @@ with tf.Session() as sess:
 
         if verbose:
             sys.stdout.write('\r')
+        print (1/(1+np.exp(-predicted[0,0:11])))
+        print (ground_truth[0,0:11])
 
         print 'Training loss: {}'.format(np.mean(total_loss))
 
