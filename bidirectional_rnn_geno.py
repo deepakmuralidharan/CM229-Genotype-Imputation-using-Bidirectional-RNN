@@ -1,8 +1,10 @@
 '''
-A Bidirectional Reccurent Neural Network (LSTM) implementation example using TensorFlow library.
-This example is using the MNIST database of handwritten digits (http://yann.lecun.com/exdb/mnist/)
-Long Short Term Memory paper: http://deeplearning.cs.cmu.edu/pdfs/Hochreiter97_lstm.pdf
+Course Project for CM229: Machine Learning for Bio-informatics
 
+A Bidirectional Reccurent Neural Network (LSTM) implementation example using TensorFlow library for
+genotype imputation
+
+Authors: Deepak Muralidharan, Manikandan Srinivasan
 '''
 import tensorflow as tf
 from tensorflow.python.ops.constant_op import constant
@@ -13,33 +15,33 @@ import sys
 import math
 
 # Parameters
-learning_rate = 0.001 # learning rate needed to be changed
+learning_rate = 0.001
 training_iters = 100000
-batch_size = 56 # number of genos in every iterat
-display_step = 10 # for printing number of display steps
+batch_size = 56 # number of rows in the genotype dataset
+display_step = 10 # for display purposes
 
 # Network Parameters
-n_input = 1 # binary genotype data
-n_steps = 49 # number of timesteps
-n_hidden = 5 # hidden layer num of features
-n_classes = 1 # binary (0 or 1)
-max_epochs = 1000
+n_input = 1 # dimension of input data (for genotype data-- since value is binary n_input = 1)
+n_steps = 49 # number of columns in the data matrix
+n_hidden = 5 # hidden layer -- hyperparameter -- values can range between 1-10
+n_classes = 1 # dimension of outout (for genotype data modelling - output is 1 or 0)
+max_epochs = 1000 # maximum number of epochs we want the training to run for
 
+# loading the data file
 data = np.loadtxt('/Users/deepakmuralidharan/Documents/Bidirectional-LSTM/data/train_data.txt',delimiter=',')
 
 # tf Graph input
-x = tf.placeholder("float", [None, n_steps, n_input]) # batch size, number of steps, input dimension
+x = tf.placeholder("float", [None, n_steps, n_input]) # [batch size, number of steps, input dimension]
 # Tensorflow LSTM cell requires 2x n_hidden length (state & cell)
-istate_fw = tf.placeholder("float", [None, 2*n_hidden]) # batch size, 2 * number of hidden units
-istate_bw = tf.placeholder("float", [None, 2*n_hidden]) # batch size, 2 * number of hidden units
-#y = tf.placeholder("float", [None, n_classes]) # batch size, number of classes
-y = tf.placeholder("float", [None, n_steps, n_classes]) # batch size, number of steps, number of classes (same size as x)
+istate_fw = tf.placeholder("float", [None, 2*n_hidden]) # [batch size, 2 * number of hidden units]
+istate_bw = tf.placeholder("float", [None, 2*n_hidden]) # [batch size, 2 * number of hidden units]
+y = tf.placeholder("float", [None, n_steps, n_classes]) # [batch size, number of steps, number of classes (same size as x)]
 
 # Define weights
 weights = {
     # Hidden layer weights => 2*n_hidden because of foward + backward cells
-    'hidden': tf.Variable(tf.random_normal([n_input, 2*n_hidden])), # input dimension, 2 * number of hidden units
-    'out': tf.Variable(tf.random_normal([2*n_hidden, n_classes])) # 2 * number of hidden units, number of classes
+    'hidden': tf.Variable(tf.random_normal([n_input, 2*n_hidden])), # [input dimension, 2 * number of hidden units]
+    'out': tf.Variable(tf.random_normal([2*n_hidden, n_classes])) # [2 * number of hidden units, number of classes]
 }
 biases = {
     'hidden': tf.Variable(tf.random_normal([2*n_hidden])),
@@ -48,11 +50,10 @@ biases = {
 
 def geno_iterator(raw_data, batch_size, num_steps):
   """
-  Assume that raw_data is a numpy matrix of rows = number of individuals (2184)
-  and columns equal to the number of SNPs.
+  Assume that raw_data is a numpy matrix of rows -- number of individuals (2184)
+  and columns -- number of SNPs.
 
-  Here the number of SNPs should be given equal to the number of columns which
-  is equal to the number of time steps.
+  Here the number of SNPs = number of columns = number of time steps.
 
   """
 
@@ -99,7 +100,7 @@ def BiRNN(_X, _istate_fw, _istate_bw, _weights, _biases, _batch_size, _seq_len):
 
 pred = BiRNN(x, istate_fw, istate_bw, weights, biases, batch_size, n_steps)
 
-# Define loss and optimizer
+# Define loss function and optimizer
 pred = tf.concat(1, pred)
 _y  = tf.squeeze(y,[2])
 cost = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(pred, _y)) # Softmax loss
@@ -111,7 +112,6 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost) #
 
 # Initializing the variables
 init = tf.initialize_all_variables()
-
 
 # Launch the graph
 with tf.Session() as sess:
