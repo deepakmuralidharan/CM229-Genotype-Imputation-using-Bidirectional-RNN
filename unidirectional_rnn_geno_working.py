@@ -1,7 +1,7 @@
 '''
 Course Project for CM229: Machine Learning for Bio-informatics
 
-A Bidirectional Reccurent Neural Network (LSTM) implementation example using TensorFlow library for
+A Unidirectional Reccurent Neural Network (LSTM) implementation example using TensorFlow library for
 genotype imputation
 
 Authors: Deepak Muralidharan, Manikandan Srinivasan
