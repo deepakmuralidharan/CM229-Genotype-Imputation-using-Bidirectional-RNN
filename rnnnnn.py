@@ -261,7 +261,7 @@ with tf.Session() as sess:
     for i in range(0, n_test):
 
         print 'Impute data row number: {}'.format(i)
-        pos = 48
+        pos = 10
         row_test_input = np.copy(test_input[i,:])
         row_test_input[pos]=0
         row_test_input = np.reshape(row_test_input,[1, n_steps, n_input])

@@ -28,7 +28,7 @@ n_input = 1 # dimension of input data (for genotype data-- since value is binary
 n_steps = 50 # number of columns in the data matrix
 n_hidden = 10 # hidden layer -- hyperparameter -- values can range between 1-10
 n_classes = 1 # dimension of outout (for genotype data modelling - output is 1 or 0)
-max_epochs = 0# maximum number of epochs we want the training to run fo10
+max_epochs = 60# maximum number of epochs we want the training to run fo10
 # loading the data file
 n_training = 2016
 n_valid = 48
@@ -162,7 +162,7 @@ pred = tf.concat(1, pred)
 # Define loss function and optimizer
 
 _y  = tf.squeeze(y,[2])
-cost = tf.reduce_sum(tf.nn.sigmoid_cross_entropy_with_logits(pred, _y)) # Softmax loss
+cost = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(pred, _y)) # Softmax loss
 #cost_valid = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(pred, _y)) # for test
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
@@ -236,12 +236,18 @@ with tf.Session() as sess:
 
 
     print "Optimization Finished!"
+
+    truth_label = []
+    predicted_label = []
+
     for i in range(0, n_test):
 
         print 'Impute data row number: {}'.format(i)
-        pos = 40
+        pos = 10
 
         row_test_input = np.copy(test_input[i,:])
+        row_test_input[pos]=0
+
         row_test_input = np.reshape(row_test_input,[1, n_steps, n_input])
         y_pred = sess.run([pred], feed_dict={x: row_test_input,
                                             istate_fw: np.zeros((1, 2*n_hidden)),
@@ -250,6 +256,16 @@ with tf.Session() as sess:
         y_pred = 1/(1+ np.exp(-y_pred))
         print y_pred[0,0,pos]
         print test_input[i,pos]
+        truth_label.append(test_input[i,pos])
+        predicted_label.append(y_pred[0,0,pos])
+
+    truth_label = np.asarray(truth_label)
+    predicted_label = np.asarray(predicted_label)
+
+    print(truth_label)
+    print(predicted_label)
+
+    print 'Mismatches: {}'.format(sum(truth_label != np.around(predicted_label)))
 
 '''
     for i in range(0, n_test):
