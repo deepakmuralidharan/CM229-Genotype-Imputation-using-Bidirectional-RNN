@@ -14,6 +14,7 @@ import time
 import sys
 import math
 from sklearn.metrics import f1_score
+import random
 
 # Parameters
 learning_rate = 0.01
@@ -23,26 +24,30 @@ display_step = 10 # for display purposes
 
 # Network Parameters
 n_input = 1 # dimension of input data (for genotype data-- since value is binary n_input = 1)
-n_steps = 20 # number of columns in the data matrix
+n_steps = 10 # number of columns in the data matrix
 n_hidden = 5 # hidden layer -- hyperparameter -- values can range between 1-10
 n_classes = 1 # dimension of outout (for genotype data modelling - output is 1 or 0)
-max_epochs = 50 # maximum number of epochs we want the training to run for
-
+max_epochs = 500# maximum number of epochs we want the training to run fo10
 # loading the data file
-n_training = 2016
-n_valid = 48
-n_test = 2084 - n_valid - n_training
+n_training = 2084
+n_valid = 24
+#n_test = 2084 - n_valid - n_training
+n_test = 76
+
+data = np.loadtxt('/Users/deepakmuralidharan/Documents/Bidirectional-LSTM/data/train_data_xor_3.txt',delimiter=',')
+train_data = np.copy(data[0:n_training, 0:n_steps+1])
+valid_split = np.copy(data[n_training:n_training + n_valid, 0:n_steps+1])
+#test_split  = np.copy(data[n_training + n_valid: n_training + n_valid + n_test, 0:n_steps+1])
+test_split = np.copy(data[0:100, 0:n_steps+1])
+
+valid_input = np.copy(valid_split[:,0:n_steps])
+valid_label = np.copy(valid_split[:,1:n_steps+1])
+
+test_input = np.copy(test_split[:,0:n_steps])
+test_label = np.copy(test_split[:,1:n_steps+1])
 
 
-data = np.loadtxt('/Users/deepakmuralidharan/Documents/Bidirectional-LSTM/data/geno_loc_1.txt',delimiter=',')
-train_data = np.copy(data[0:n_training,0:n_steps])
-valid_data = np.copy(data[n_training:n_training + n_valid,0:n_steps])
-test_data  = np.copy(data[n_training + n_valid: n_training + n_valid + n_test,0:n_steps])
-
-print train_data.shape
-print valid_data.shape
-print test_data.shape
-exit
+"""
 xor_data = np.loadtxt('/Users/deepakmuralidharan/Documents/Bidirectional-LSTM/data/randi.txt',delimiter=',')
 test_data = xor_data[1736:2184, 00:15]
 print test_data.shape
@@ -50,6 +55,7 @@ test_label = data[1736:2184, 01:16]
 print test_label.shape
 data = data[0:2184, 00:16]
 valid_len = 448
+"""
 
 # tf Graph input
 x = tf.placeholder("float", [None, n_steps, n_input]) # [batch size, number of steps, input dimension]
@@ -81,8 +87,8 @@ def geno_iterator(raw_data, batch_size, num_steps):
   col_iter = (raw_data.shape[0]) // batch_size # number of loops we would be needing
 
   for i  in range(col_iter):
-      x = raw_data[i * batch_size: (i + 1) * batch_size, 0:num_steps] # giving the entire range as time steps
-      y = raw_data[i * batch_size: (i + 1) * batch_size, 1:(num_steps + 1)]
+      x = np.copy(raw_data[i * batch_size: (i + 1) * batch_size, 0:num_steps]) # giving the entire range as time steps
+      y = np.copy(raw_data[i * batch_size: (i + 1) * batch_size, 1:(num_steps + 1)])
       yield (x,y)
 '''
 def BiRNN(_X, _istate_fw, _istate_bw, _weights, _biases, _batch_size, _seq_len):
@@ -131,9 +137,9 @@ def BiRNN(_X, _istate_fw, _istate_bw, _weights, _biases):
 
     # Define lstm cells with tensorflow
     # Forward direction cell
-    lstm_fw_cell = rnn_cell.BasicLSTMCell(n_hidden, forget_bias=1.0)
+    lstm_fw_cell = rnn_cell.BasicLSTMCell(n_hidden, forget_bias=0.0)
     # Backward direction cell
-    lstm_bw_cell = rnn_cell.BasicLSTMCell(n_hidden, forget_bias=1.0)
+    lstm_bw_cell = rnn_cell.BasicLSTMCell(n_hidden, forget_bias=0.0)
     # Split data because rnn cell needs a list of inputs for the RNN inner loop
     _X = tf.split(0, n_steps, _X) # n_steps * (batch_size, n_hidden)
 
@@ -177,13 +183,13 @@ with tf.Session() as sess:
     for epoch in xrange(max_epochs):
 
         total_loss = []
-        total_steps = sum(1 for x in geno_iterator(data, batch_size, n_steps))
+        total_steps = sum(1 for x in geno_iterator(train_data, batch_size, n_steps))
         verbose = 10
 
         print 'Epoch {}'.format(epoch)
         start = time.time()
         for step, (batch_xs, batch_ys) in enumerate(
-          geno_iterator(data, batch_size, n_steps)):
+          geno_iterator(train_data, batch_size, n_steps)):
 
           batch_xs = np.reshape(batch_xs,[batch_size, n_steps, n_input])
           batch_ys = np.reshape(batch_ys,[batch_size, n_steps, n_input])
@@ -209,20 +215,58 @@ with tf.Session() as sess:
 
         print 'Training loss: {}'.format(np.mean(total_loss))
 
-        test_data = np.reshape(test_data,[valid_len, n_steps, n_input])
-        test_label = np.reshape(test_label,[valid_len, n_steps, n_input])
+        valid_input = np.reshape(valid_input,[n_valid, n_steps, n_input])
+        valid_label = np.reshape(valid_label,[n_valid, n_steps, n_input])
         start = time.time()
 
-        validation_loss = sess.run(cost, feed_dict={x: test_data, y: test_label,
-                                                                 istate_fw: np.zeros((valid_len, 2*n_hidden)),
-                                                                 istate_bw: np.zeros((valid_len, 2*n_hidden))})
+        validation_loss = sess.run(cost, feed_dict={x: valid_input, y: valid_label,
+                                                                 istate_fw: np.zeros((n_valid, 2*n_hidden)),
+                                                                 istate_bw: np.zeros((n_valid, 2*n_hidden))})
+
+
 
         #print 'Run time: {}'.format(time.time() - start)
         print 'Validation loss: {}'.format(validation_loss)
 
-        if validation_loss > best_val_epoch:
-            print "Breaking out of algorithm..."
-            break
+        pos = 4
+
+        loss_arr = []
+
+        row_test_input = np.copy(test_input[2,:])
+        row_test_label = np.copy(test_label[2,:])
+
+        row_test_input = np.reshape(row_test_input,[1, n_steps, n_input])
+        row_test_label = np.reshape(row_test_label,[1, n_steps, n_input])
+
+        for new_value in (1,0):
+
+            row_test_input[0,pos,0] = new_value
+            row_test_label[0,pos-1,0] = new_value
+
+            [testing_loss,y_pred,y_true] = sess.run([cost,pred,_y], feed_dict={x: row_test_input, y: row_test_label,
+                                                istate_fw: np.zeros((1, 2*n_hidden)),
+                                                istate_bw: np.zeros((1, 2*n_hidden))})
+
+            y_pred = 1/(1 + np.exp(-y_pred))
+            print 'Testing Loss for new_value {}: {}'.format(new_value, testing_loss)
+            print 'Predicted output for new_value {}: {}'.format(new_value, y_pred)
+            print 'Truth output for new_value {}: {}'.format(new_value, y_true)
+
+            #loss_arr.append(testing_loss)
+
+        #loss_arr = np.asarray(loss_arr)
+
+
+
+
+
+        #test_input[i,pos] = np.where(loss_arr == np.min(loss_arr))[0][0]
+        #test_label[i,pos-1] = test_input[i,pos]
+
+
+        #if validation_loss > best_val_epoch:
+        #    print "Breaking out of algorithm..."
+        #    break
 
         best_val_epoch = validation_loss
 
@@ -230,26 +274,4 @@ with tf.Session() as sess:
 
     print "Optimization Finished!"
 
-    test_data = np.reshape(test_data,[valid_len, n_steps, n_input])
-    test_label = np.reshape(test_label,[valid_len, n_steps, n_input])
-    print test_data.shape
-
-    y_predicted, testing_loss, y_true = sess.run([pred, cost, _y], feed_dict={x: test_data, y: test_label,
-                                                             istate_fw: np.zeros((valid_len, 2*n_hidden)),
-                                                             istate_bw: np.zeros((valid_len, 2*n_hidden))})
-
-
-    print 'Testing loss: {}'.format(testing_loss)
-    y_predicted = 1/(1+np.exp(-y_predicted))
-
-    print 'F1-score: {}'.format(f1_score(y_true, np.around(y_predicted)), average = 'macro')
-
-
-
-    # Calculate accuracy for 128 mnist test images
-    #valid_len = 128
-    #test_data = mnist.test.images[:valid_len].reshape((-1, n_steps, n_input))
-    #test_label = mnist.test.labels[:valid_len]
-    #print "Testing Accuracy:", sess.run(accuracy, feed_dict={x: test_data, y: test_label,
-                                                             #istate_fw: np.zeros((valid_len, 2*n_hidden)),
-                                                             #istate_bw: np.zeros((valid_len, 2*n_hidden))})
+    #print 'Mismatches: {}'.format(sum(sum(test_input!=test_split[:,0:n_steps])))
