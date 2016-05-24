@@ -35,7 +35,7 @@ n_valid = 48
 #n_test = 2084 - n_valid - n_training
 n_test = 100
 
-data = np.loadtxt('/Users/deepakmuralidharan/Documents/Bidirectional-LSTM/data/geno_good_data.txt',delimiter=',')
+data = np.loadtxt('data/geno_good_data.txt',delimiter=',')
 train_data = np.copy(data[0:n_training, 0:n_steps+1])
 valid_split = np.copy(data[n_training:n_training + n_valid, 0:n_steps+1])
 test_split  = np.copy(data[n_training + n_valid: n_training + n_valid + n_test, 0:n_steps+1])
