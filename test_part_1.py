@@ -28,7 +28,7 @@ n_input = 1 # dimension of input data (for genotype data-- since value is binary
 n_steps = 50 # number of columns in the data matrix
 n_hidden = 10 # hidden layer -- hyperparameter -- values can range between 1-10
 n_classes = 1 # dimension of outout (for genotype data modelling - output is 1 or 0)
-max_epochs = 80# maximum number of epochs we want the training to run fo10
+max_epochs = 100# maximum number of epochs we want the training to run fo10
 # loading the data file
 n_training = 2016
 n_valid = 48
@@ -173,6 +173,7 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Initializing the variables
 init = tf.initialize_all_variables()
+saver = tf.train.Saver()
 
 # Launch the graph
 with tf.Session() as sess:
@@ -236,74 +237,5 @@ with tf.Session() as sess:
 
 
     print "Optimization Finished!"
-
-    truth_label = []
-    predicted_label = []
-
-    for i in range(0, n_test):
-
-        print 'Impute data row number: {}'.format(i)
-        pos = 15
-
-        row_test_input = np.copy(test_input[i,:])
-        row_test_input[pos]=0
-
-        row_test_input = np.reshape(row_test_input,[1, n_steps, n_input])
-        y_pred = sess.run([pred], feed_dict={x: row_test_input,
-                                            istate_fw: np.zeros((1, 2*n_hidden)),
-                                            istate_bw: np.zeros((1, 2*n_hidden))})
-        y_pred = np.asarray(y_pred)
-        y_pred = 1/(1+ np.exp(-y_pred))
-        print y_pred[0,0,pos]
-        print test_input[i,pos]
-        truth_label.append(test_input[i,pos])
-        predicted_label.append(y_pred[0,0,pos])
-
-    truth_label = np.asarray(truth_label)
-    predicted_label = np.asarray(predicted_label)
-
-    print(truth_label)
-    print(predicted_label)
-
-    print 'Mismatches: {}'.format(sum(truth_label != np.around(predicted_label)))
-
-'''
-    for i in range(0, n_test):
-
-        print 'Impute data row number: {}'.format(i)
-
-        pos = 12
-
-        loss_arr = []
-
-        row_test_input = np.copy(test_input[i,:])
-        row_test_label = np.copy(test_label[i,:])
-
-        row_test_input = np.reshape(row_test_input,[1, n_steps, n_input])
-        row_test_label = np.reshape(row_test_label,[1, n_steps, n_input])
-
-        for new_value in (0,1):
-
-            row_test_input[0,pos,0] = new_value
-            row_test_label[0,pos,0] = new_value
-
-            testing_loss = sess.run(cost, feed_dict={x: row_test_input,
-                                                istate_fw: np.zeros((1, 2*n_hidden)),
-                                                istate_bw: np.zeros((1, 2*n_hidden))})
-
-
-
-            loss_arr.append(testing_loss)
-
-        loss_arr = np.asarray(loss_arr)
-
-        print 'Loss-Arr: {}'.format(loss_arr)
-
-
-
-        test_input[i,pos] = np.where(loss_arr == np.min(loss_arr))[0][0]
-        test_label[i,pos-1] = test_input[i,pos]
-
-
-    print 'Mismatches: {}'.format(sum(sum(test_input!=test_split[:,0:n_steps])))
-'''
+    saver.save(sess, './geno_bi.weights')
+    print "saved..."

@@ -28,7 +28,7 @@ n_input = 1 # dimension of input data (for genotype data-- since value is binary
 n_steps = 50 # number of columns in the data matrix
 n_hidden = 10 # hidden layer -- hyperparameter -- values can range between 1-10
 n_classes = 1 # dimension of outout (for genotype data modelling - output is 1 or 0)
-max_epochs = 80# maximum number of epochs we want the training to run fo10
+max_epochs = 60# maximum number of epochs we want the training to run fo10
 # loading the data file
 n_training = 2016
 n_valid = 48
@@ -173,6 +173,7 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Initializing the variables
 init = tf.initialize_all_variables()
+saver = tf.train.Saver()
 
 # Launch the graph
 with tf.Session() as sess:
@@ -236,6 +237,9 @@ with tf.Session() as sess:
 
 
     print "Optimization Finished!"
+    saver.save(sess, './geno.weights')
+
+
 
     truth_label = []
     predicted_label = []
@@ -243,7 +247,7 @@ with tf.Session() as sess:
     for i in range(0, n_test):
 
         print 'Impute data row number: {}'.format(i)
-        pos = 15
+        pos = 10
 
         row_test_input = np.copy(test_input[i,:])
         row_test_input[pos]=0

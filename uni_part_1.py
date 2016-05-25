@@ -1,7 +1,7 @@
 '''
 Course Project for CM229: Machine Learning for Bio-informatics
 
-A Bidirectional Reccurent Neural Network (LSTM) implementation example using TensorFlow library for
+A Unidirectional Reccurent Neural Network (LSTM) implementation example using TensorFlow library for
 genotype imputation
 
 Authors: Deepak Muralidharan, Manikandan Srinivasan
@@ -16,7 +16,6 @@ import math
 from sklearn.metrics import f1_score
 import random
 
-
 # Parameters
 learning_rate = 0.01
 training_iters = 100000
@@ -28,24 +27,24 @@ n_input = 1 # dimension of input data (for genotype data-- since value is binary
 n_steps = 50 # number of columns in the data matrix
 n_hidden = 10 # hidden layer -- hyperparameter -- values can range between 1-10
 n_classes = 1 # dimension of outout (for genotype data modelling - output is 1 or 0)
-max_epochs = 80# maximum number of epochs we want the training to run fo10
+max_epochs = 60# maximum number of epochs we want the training to run fo10
 # loading the data file
 n_training = 2016
 n_valid = 48
 #n_test = 2084 - n_valid - n_training
 n_test = 100
 
-data = np.loadtxt('data/geno_good_data.txt',delimiter=',')
+data = np.loadtxt('data/geno_loc_2.txt',delimiter=',')
 train_data = np.copy(data[0:n_training, 0:n_steps+1])
 valid_split = np.copy(data[n_training:n_training + n_valid, 0:n_steps+1])
 test_split  = np.copy(data[n_training + n_valid: n_training + n_valid + n_test, 0:n_steps+1])
 #test_split = np.copy(data[0:100, 0:n_steps+1])
 
 valid_input = np.copy(valid_split[:,0:n_steps])
-valid_label = np.copy(valid_split[:,0:n_steps])
+valid_label = np.copy(valid_split[:,1:n_steps+1])
 
 test_input = np.copy(test_split[:,0:n_steps])
-test_label = np.copy(test_split[:,0:n_steps])
+test_label = np.copy(test_split[:,1:n_steps+1])
 
 
 """
@@ -61,18 +60,17 @@ valid_len = 448
 # tf Graph input
 x = tf.placeholder("float", [None, n_steps, n_input]) # [batch size, number of steps, input dimension]
 # Tensorflow LSTM cell requires 2x n_hidden length (state & cell)
-istate_fw = tf.placeholder("float", [None, 2*n_hidden]) # [batch size, 2 * number of hidden units]
-istate_bw = tf.placeholder("float", [None, 2*n_hidden]) # [batch size, 2 * number of hidden units]
+istate = tf.placeholder("float", [None, 2*n_hidden]) # [batch size, 2 * number of hidden units]# [batch size, 2 * number of hidden units]
 y = tf.placeholder("float", [None, n_steps, n_classes]) # [batch size, number of steps, number of classes (same size as x)]
 
 # Define weights
 weights = {
     # Hidden layer weights => 2*n_hidden because of foward + backward cells
-    'hidden': tf.Variable(tf.random_normal([n_input, 2*n_hidden])), # [input dimension, 2 * number of hidden units]
-    'out': tf.Variable(tf.random_normal([2*n_hidden, n_classes])) # [2 * number of hidden units, number of classes]
+    'hidden': tf.Variable(tf.random_normal([n_input, n_hidden])), # [input dimension, 2 * number of hidden units]
+    'out': tf.Variable(tf.random_normal([n_hidden, n_classes])) # [2 * number of hidden units, number of classes]
 }
 biases = {
-    'hidden': tf.Variable(tf.random_normal([2*n_hidden])),
+    'hidden': tf.Variable(tf.random_normal([n_hidden])),
     'out': tf.Variable(tf.random_normal([n_classes]))
 }
 
@@ -89,7 +87,7 @@ def geno_iterator(raw_data, batch_size, num_steps):
 
   for i  in range(col_iter):
       x = np.copy(raw_data[i * batch_size: (i + 1) * batch_size, 0:num_steps]) # giving the entire range as time steps
-      y = np.copy(raw_data[i * batch_size: (i + 1) * batch_size, 0:num_steps])
+      y = np.copy(raw_data[i * batch_size: (i + 1) * batch_size, 1:(num_steps + 1)])
       yield (x,y)
 '''
 def BiRNN(_X, _istate_fw, _istate_bw, _weights, _biases, _batch_size, _seq_len):
@@ -127,6 +125,7 @@ def BiRNN(_X, _istate_fw, _istate_bw, _weights, _biases, _batch_size, _seq_len):
     return output
 '''
 
+"""
 def BiRNN(_X, _istate_fw, _istate_bw, _weights, _biases):
 
      # input shape: (batch_size, n_steps, n_input)
@@ -154,9 +153,33 @@ def BiRNN(_X, _istate_fw, _istate_bw, _weights, _biases):
     output = [tf.matmul(o, _weights['out']) + _biases['out'] for o in outputs]
     return output
 
+"""
 
+def RNN(_X, _istate, _weights, _biases):
+
+    # input shape: (batch_size, n_steps, n_input)
+    _X = tf.transpose(_X, [1, 0, 2])  # permute n_steps and batch_size
+    # Reshape to prepare input to hidden activation
+    _X = tf.reshape(_X, [-1, n_input]) # (n_steps*batch_size, n_input)
+    # Linear activation
+    _X = tf.matmul(_X, _weights['hidden']) + _biases['hidden']
+
+    # Define a lstm cell with tensorflow
+    lstm_cell = rnn_cell.BasicLSTMCell(n_hidden, forget_bias=1.0)
+    # Split data because rnn cell needs a list of inputs for the RNN inner loop
+    _X = tf.split(0, n_steps, _X) # n_steps * (batch_size, n_hidden)
+
+    # Get lstm cell output
+    outputs, states = rnn.rnn(lstm_cell, _X, initial_state=_istate)
+
+    # Linear activation
+    # Get inner loop last output
+    output = [tf.matmul(o, _weights['out']) + _biases['out'] for o in outputs]
+    return output
+
+pred = RNN(x, istate, weights, biases)
 #pred = BiRNN(x, istate_fw, istate_bw, weights, biases, batch_size, n_steps)
-pred = BiRNN(x, istate_fw, istate_bw, weights, biases)
+#pred = BiRNN(x, istate_fw, istate_bw, weights, biases)
 pred = tf.concat(1, pred)
 
 # Define loss function and optimizer
@@ -173,6 +196,7 @@ optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Initializing the variables
 init = tf.initialize_all_variables()
+saver = tf.train.Saver()
 
 # Launch the graph
 with tf.Session() as sess:
@@ -196,12 +220,10 @@ with tf.Session() as sess:
           batch_ys = np.reshape(batch_ys,[batch_size, n_steps, n_input])
 
           sess.run(optimizer, feed_dict={x: batch_xs, y: batch_ys,
-                                         istate_fw: np.zeros((batch_size, 2*n_hidden)),
-                                         istate_bw: np.zeros((batch_size, 2*n_hidden))})
+                                         istate: np.zeros((batch_size, 2*n_hidden))})
 
           predicted, loss, ground_truth = sess.run([pred, cost, _y], feed_dict={x: batch_xs, y: batch_ys,
-                                           istate_fw: np.zeros((batch_size, 2*n_hidden)),
-                                           istate_bw: np.zeros((batch_size, 2*n_hidden))})
+                                           istate: np.zeros((batch_size, 2*n_hidden))})
 
           total_loss.append(loss)
           if verbose and step % verbose == 0:
@@ -221,8 +243,7 @@ with tf.Session() as sess:
         start = time.time()
 
         validation_loss = sess.run(cost, feed_dict={x: valid_input, y: valid_label,
-                                                                 istate_fw: np.zeros((n_valid, 2*n_hidden)),
-                                                                 istate_bw: np.zeros((n_valid, 2*n_hidden))})
+                                                                 istate: np.zeros((n_valid, 2*n_hidden))})
 
         #print 'Run time: {}'.format(time.time() - start)
         print 'Validation loss: {}'.format(validation_loss)
@@ -234,76 +255,6 @@ with tf.Session() as sess:
         best_val_epoch = validation_loss
 
 
-
     print "Optimization Finished!"
-
-    truth_label = []
-    predicted_label = []
-
-    for i in range(0, n_test):
-
-        print 'Impute data row number: {}'.format(i)
-        pos = 15
-
-        row_test_input = np.copy(test_input[i,:])
-        row_test_input[pos]=0
-
-        row_test_input = np.reshape(row_test_input,[1, n_steps, n_input])
-        y_pred = sess.run([pred], feed_dict={x: row_test_input,
-                                            istate_fw: np.zeros((1, 2*n_hidden)),
-                                            istate_bw: np.zeros((1, 2*n_hidden))})
-        y_pred = np.asarray(y_pred)
-        y_pred = 1/(1+ np.exp(-y_pred))
-        print y_pred[0,0,pos]
-        print test_input[i,pos]
-        truth_label.append(test_input[i,pos])
-        predicted_label.append(y_pred[0,0,pos])
-
-    truth_label = np.asarray(truth_label)
-    predicted_label = np.asarray(predicted_label)
-
-    print(truth_label)
-    print(predicted_label)
-
-    print 'Mismatches: {}'.format(sum(truth_label != np.around(predicted_label)))
-
-'''
-    for i in range(0, n_test):
-
-        print 'Impute data row number: {}'.format(i)
-
-        pos = 12
-
-        loss_arr = []
-
-        row_test_input = np.copy(test_input[i,:])
-        row_test_label = np.copy(test_label[i,:])
-
-        row_test_input = np.reshape(row_test_input,[1, n_steps, n_input])
-        row_test_label = np.reshape(row_test_label,[1, n_steps, n_input])
-
-        for new_value in (0,1):
-
-            row_test_input[0,pos,0] = new_value
-            row_test_label[0,pos,0] = new_value
-
-            testing_loss = sess.run(cost, feed_dict={x: row_test_input,
-                                                istate_fw: np.zeros((1, 2*n_hidden)),
-                                                istate_bw: np.zeros((1, 2*n_hidden))})
-
-
-
-            loss_arr.append(testing_loss)
-
-        loss_arr = np.asarray(loss_arr)
-
-        print 'Loss-Arr: {}'.format(loss_arr)
-
-
-
-        test_input[i,pos] = np.where(loss_arr == np.min(loss_arr))[0][0]
-        test_label[i,pos-1] = test_input[i,pos]
-
-
-    print 'Mismatches: {}'.format(sum(sum(test_input!=test_split[:,0:n_steps])))
-'''
+    saver.save(sess, './geno_uni.weights')
+    print "saved..."
