@@ -1,2 +1,0 @@
-model_checkpoint_path: "geno_uni.weights"
-all_model_checkpoint_paths: "geno_uni.weights"

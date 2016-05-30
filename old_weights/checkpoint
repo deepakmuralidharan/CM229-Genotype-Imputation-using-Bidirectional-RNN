@@ -1,0 +1,2 @@
+model_checkpoint_path: "geno_loc_new_diploid.weights"
+all_model_checkpoint_paths: "geno_loc_new_diploid.weights"

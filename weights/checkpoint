@@ -1,0 +1,2 @@
+model_checkpoint_path: "diploid.bi.weights"
+all_model_checkpoint_paths: "diploid.bi.weights"
