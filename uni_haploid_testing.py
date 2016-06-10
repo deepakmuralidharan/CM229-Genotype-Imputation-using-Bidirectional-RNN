@@ -146,8 +146,11 @@ with tf.Session() as sess:
         mismatches.append(sum(truth_label1 != np.around(predicted_label1)))
 
     plt.stem(range(1,49),np.asarray(mismatches))
+    axes = plt.gca()
+    axes.set_ylim([0,100])
     plt.title('SNP position vs Mismatches (Haploid Data) [Unidirectional RNN]')
     plt.xlabel('SNP position')
     plt.ylabel('Number of Mismatches (out of 184)')
     plt.savefig('./results/uni_rnn_haploid.png', bbox_inches='tight')
+
     plt.show()

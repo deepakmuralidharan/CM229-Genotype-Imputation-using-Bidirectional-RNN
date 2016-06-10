@@ -1,5 +1,5 @@
 '''
-GENOTYPE IMPUTATION ON HAPLOID DATA (contd...)
+GENOTYPE IMPUTATION ON DIPLOID DATA (contd...)
 
 (Cleaned Version of the Code) - PART 2: Testing
 
@@ -12,6 +12,7 @@ Authors: Deepak Muralidharan, Manikandan Srinivasan
 
 Last edited: 5/28/2016
 '''
+
 import tensorflow as tf
 from tensorflow.python.ops.constant_op import constant
 from tensorflow.models.rnn import rnn, rnn_cell
@@ -27,20 +28,19 @@ import matplotlib.pyplot as plt
 learning_rate = 0.01
 training_iters = 100000
 batch_size = 100
-display_step = 10
 
 # Network Parameters
-n_input = 1
+n_input = 3
 n_steps = 50
 n_hidden = 10
-n_classes = 1
-n_training = 2000
+n_classes = 3
+n_training = 1000
 n_valid = 0
-n_test = 184
+n_test = 92
 
-data = np.loadtxt('data/geno_loc_new.txt',delimiter=',')
+data = np.loadtxt('data/geno_loc_new_diploid.txt',delimiter=',')
 
-test_split  = np.copy(data[n_training + n_valid: n_training + n_valid + n_test, 0:n_steps])
+test_split  = np.copy(data[n_training: n_training + n_test, 0:n_steps])
 
 test_input = np.copy(test_split[:,0:n_steps])
 test_label = np.copy(test_split[:,0:n_steps])
@@ -58,10 +58,12 @@ weights = {
     'hidden': tf.Variable(tf.random_normal([n_input, 2*n_hidden])), # [input dimension, 2 * number of hidden units]
     'out': tf.Variable(tf.random_normal([2*n_hidden, n_classes])) # [2 * number of hidden units, number of classes]
 }
+
 biases = {
     'hidden': tf.Variable(tf.random_normal([2*n_hidden])),
     'out': tf.Variable(tf.random_normal([n_classes]))
 }
+
 
 def BiRNN(_X, _istate_fw, _istate_bw, _weights, _biases):
 
@@ -71,7 +73,6 @@ def BiRNN(_X, _istate_fw, _istate_bw, _weights, _biases):
     _X = tf.reshape(_X, [-1, n_input]) # (n_steps*batch_size, n_input)
     # Linear activation
     _X = tf.matmul(_X, _weights['hidden']) + _biases['hidden']
-
     # Define lstm cells with tensorflow
     # Forward direction cell
     lstm_fw_cell = rnn_cell.BasicLSTMCell(n_hidden, forget_bias=1.0)
@@ -84,27 +85,71 @@ def BiRNN(_X, _istate_fw, _istate_bw, _weights, _biases):
     outputs = rnn.bidirectional_rnn(lstm_fw_cell, lstm_bw_cell, _X,
                                             initial_state_fw=_istate_fw,
                                             initial_state_bw=_istate_bw)
-
     # Linear activation
     # Get inner loop last output
     output = [tf.matmul(o, _weights['out']) + _biases['out'] for o in outputs]
     return output
 
-
-#pred = BiRNN(x, istate_fw, istate_bw, weights, biases, batch_size, n_steps)
 pred = BiRNN(x, istate_fw, istate_bw, weights, biases)
-pred = tf.concat(1, pred)
+
+pred_arg = []
+for i in xrange(0, len(pred)):
+    pred_arg.append(tf.argmax(pred[i],1))
+
+pred_arg = tf.concat(0,pred_arg)
 
 saver = tf.train.Saver()
 
 with tf.Session() as sess:
 
-    saver.restore(sess, './weights/haploid.bi.weights')
+    saver.restore(sess, './weights/diploid.bi.weights')
     print "restored..."
     mismatches = []
+    pos_1 = 45
+    pos_2 = 30
 
-    for pos in range(1,49):
+    for i in range(0,50):
 
+        row_test_input = np.copy(test_input[i,:])
+        row_test_input[pos_1]=random.randint(0,2)
+        row_test_input[pos_2]=random.randint(0,2)
+        print 'ground1 and ground2: {} and {}'.format(test_input[i,pos_1],test_input[i,pos_2])
+
+        for i in xrange(0,4):
+
+            print 'pos1 and pos2: {} and {}'.format(row_test_input[pos_1],row_test_input[pos_2])
+
+
+            x_b = row_test_input.astype(int)
+            x_b = np.eye(n_input)[x_b]
+            x_b = x_b.astype(float)
+            x_b = np.reshape(x_b,[1, n_steps, n_classes])
+
+            y_pred = sess.run(pred_arg, feed_dict={x: x_b,
+                                                istate_fw: np.zeros((1, 2*n_hidden)),
+                                                istate_bw: np.zeros((1, 2*n_hidden))})
+            y_pred = np.asarray(y_pred)
+            row_test_input[pos_1]= y_pred[pos_1]
+
+            x_b = row_test_input.astype(int)
+            x_b = np.eye(n_input)[x_b]
+            x_b = x_b.astype(float)
+            x_b = np.reshape(x_b,[1, n_steps, n_classes])
+
+            y_pred = sess.run(pred_arg, feed_dict={x: x_b,
+                                                istate_fw: np.zeros((1, 2*n_hidden)),
+                                                istate_bw: np.zeros((1, 2*n_hidden))})
+            y_pred = np.asarray(y_pred)
+            row_test_input[pos_2] = y_pred[pos_2]
+
+
+
+
+
+
+
+    """
+    for pos in range(0,50):
         truth_label = []
         predicted_label = []
         print pos
@@ -112,31 +157,31 @@ with tf.Session() as sess:
         for i in range(0, n_test):
 
             row_test_input = np.copy(test_input[i,:])
-            row_test_input[pos]=0
 
-            row_test_input = np.reshape(row_test_input,[1, n_steps, n_input])
-            y_pred = sess.run(pred, feed_dict={x: row_test_input,
+            x_b = row_test_input.astype(int)
+            x_b = np.eye(n_input)[x_b]
+            x_b = x_b.astype(float)
+            x_b = np.reshape(x_b,[1, n_steps, n_classes])
+
+            y_pred = sess.run(pred_arg, feed_dict={x: x_b,
                                                 istate_fw: np.zeros((1, 2*n_hidden)),
                                                 istate_bw: np.zeros((1, 2*n_hidden))})
             y_pred = np.asarray(y_pred)
-            y_pred = 1/(1+ np.exp(-y_pred))
 
             truth_label.append(test_input[i,pos])
-            predicted_label.append(round(y_pred[0,pos],2))
+            predicted_label.append(y_pred[pos])
 
         truth_label1 = np.asarray(truth_label)
         predicted_label1 = np.asarray(predicted_label)
 
-        #print(truth_label1)
-        #print(predicted_label1)
+        print truth_label1
+        print predicted_label1
 
         mismatches.append(sum(truth_label1 != np.around(predicted_label1)))
-
-    plt.stem(range(1,49),np.asarray(mismatches))
-    axes = plt.gca()
-    axes.set_ylim([0,100])
-    plt.title('SNP position vs Mismatches (Haploid Data) [Bidirectional RNN]')
+    plt.stem(range(0,50),np.asarray(mismatches))
+    plt.title('SNP position vs Mismatches')
     plt.xlabel('SNP position')
-    plt.ylabel('Number of Mismatches (out of 184)')
-    plt.savefig('./results/bi_rnn_haploid.png', bbox_inches='tight')
+    plt.ylabel('Number of Mismatches (out of 92)')
+    plt.savefig('./results/bi_rnn_diploid.png', bbox_inches='tight')
     plt.show()
+    """

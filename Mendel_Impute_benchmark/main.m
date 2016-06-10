@@ -1,12 +1,16 @@
-clear; clc;
+
+clc;
+close all;
+clear all;
+
 D=importdata('/Users/deepakmuralidharan/Documents/Bidirectional-LSTM/data/geno_loc_new_diploid.txt');
 %D=randi([0 2],1092,500);
 M=D(:,1:50);
-Masked_M=M; 
+Masked_M=M;
+errors = []
 %Masked_M(2084:2184,15)=NaN;
 w=16;
-errors=[];
-for i=2:49
+for i=1:50
 i
 Masked_M=M; 
 Masked_M(1001:1092,i)=NaN; %%imputing :)
@@ -18,8 +22,6 @@ error_i=(Z1(1001:1092,i)~=M(1001:1092,i));
 errors=[errors error_i];
 end
 
-x = 2:49;
-stem(x,sum(errors));
-xlabel('SNP position');
-ylabel('Number of mismatches (out of 92)');
-title('SNP position vs Mismatches [Mendel Impute on Diploid Data]');
+x = 1:50;
+y = sum(errors);
+stem(x,y);
