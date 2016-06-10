@@ -1,11 +1,15 @@
-# Genotype imputation using Bidirectional-RNN/LSTM.
+Genotype imputation using Bidirectional Recurrent Neural Network
+===================================================================
+Authors: Deepak Muralidharan and Manikandan Srinivasan
+--------
+Course project for CM229 (Instructor: Prof Sriram Sankararaman)
+--------
+The folder contains the code for the following methods:
+  - Bidirectional Recurrent Neural Network for Diploid/Haploid genotype data. (bi_haploid_training, bi_diploid_training, bi_haploid_testing, bi_diploid_testing)
+  - Unidirectional Recurrent Neural Network for Diploid/haploid genotype data. (uni_haploid_training, uni_haploid_testing)
+  - Robust PCA based imputation method for Diploid/haploid genotype data. (robust_pca_main.m)
+
+For any queries, contact: Deepak Muralidharan (deepakmuralidharan2308@gmail.com) or Manikandan Srinivasan (manikandav@gmail.com)
 
 
-Current version uses the geno_loc_new.txt file which contains SNPs from around positions: 9900 - 10000 in the 1000genomes dataset. The dataset has been preprocessed such that the 0/1 distribution along each SNP is between 0.3 and 0.7. 
 
-
-TO DO LIST
-
-1) Calculate r^2 correlation values to compare with the ground truth.
-
-2) Measure concordance values (if required).
