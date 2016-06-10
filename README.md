@@ -9,7 +9,7 @@ The folder contains the code for the following methods:
   - Unidirectional Recurrent Neural Network for Diploid/haploid genotype data. (uni_haploid_training, uni_haploid_testing)
   - Robust PCA based imputation method for Diploid/haploid genotype data. (robust_pca_main.m)
 
-For any queries, contact: Deepak Muralidharan (deepakmuralidharan2308@gmail.com) or Manikandan Srinivasan (manikandav@gmail.com)
+For any queries, contact: Deepak Muralidharan (deepakmuralidharan2308@gmail.com) or Manikandan Srinivasan (manikandandav@gmail.com)
 
 
 
